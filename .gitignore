@@ -29,3 +29,7 @@ nosetests.xml
 
 # Translations
 *.mo
+
+# Provide your own
+environment.py
+fabfile.py
