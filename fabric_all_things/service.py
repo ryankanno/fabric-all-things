@@ -3,6 +3,7 @@
 
 from fabric.api import settings
 from fabric.api import sudo
+from fabric.api import task
 
 def _service(name, action, warn_only=False):
     """ Generic service function """
