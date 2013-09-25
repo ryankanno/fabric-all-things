@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from boto.ec2 import connect_to_region
+
 from fabric.api import task
 
 @task
