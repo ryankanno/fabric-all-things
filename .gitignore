@@ -33,3 +33,4 @@ nosetests.xml
 # Provide your own
 environment.py
 fabfile.py
+fabric-all-things.cfg
