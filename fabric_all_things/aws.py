@@ -11,8 +11,8 @@ from config import config
 from utilities import wait_for_instance_state
 
 @task
-def run_instance(aws_region, ami_id, instance_type=None, key_name=None,
-        availability_zone=None):
+def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None, key_name=None,
+        availability_zone=None, security_groups=None, user_data=None):
     """
     Creates and runs AWS ami in a specified region 
     """
@@ -22,15 +22,15 @@ def run_instance(aws_region, ami_id, instance_type=None, key_name=None,
         config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
-    instance_type = instance_type or 't1.micro'
+    instance_type = instance_type or 'm1.small'
 
-    reservation = conn.run(
+    reservation = conn.run_instances(
         image_id=ami_id,
         key_name=key_name,
         security_groups=security_groups,
         instance_type=instance_type,
         user_data=user_data, 
-        placement=zone_name).instances[0]
+        placement=availability_zone).instances[0]
 
     wait_for_instance_state(reservation, 'running')
     return reservation
