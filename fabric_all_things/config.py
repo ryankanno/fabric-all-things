@@ -3,11 +3,16 @@
 
 import ConfigParser
 
+class MissingConfig(Exception):
+    pass
+
 
 class Config(object):
     def __init__(self, config_name='fabric-all-things.cfg'):
-        self.config = ConfigParser.RawConfigParser()
-        self.config.read(config_name)
+        self.config = ConfigParser.SafeConfigParser()
+        config_parsed = self.config.read(config_name)
+        if not config_parsed:
+            raise MissingConfig("Unable to read configuration file: {0}".format(config_name))
 
     def __getattr__(self, name):
         idx = name.find('_') 

@@ -8,13 +8,32 @@ from fabric.api import task
 from fabric.colors import green
 
 from config import config
+from utilities import wait_for_instance_state
 
 @task
-def create_instance(aws_region, availability_zone, key_name, security_groups):
+def run_instance(aws_region, ami_id, instance_type=None, key_name=None,
+        availability_zone=None):
+    """
+    Creates and runs AWS ami in a specified region 
+    """
+
     conn = _get_ec2_connection(
         aws_region,
         config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
+
+    instance_type = instance_type or 't1.micro'
+
+    reservation = conn.run(
+        image_id=ami_id,
+        key_name=key_name,
+        security_groups=security_groups,
+        instance_type=instance_type,
+        user_data=user_data, 
+        placement=zone_name).instances[0]
+
+    wait_for_instance_state(reservation, 'running')
+    return reservation
 
 
 @task
@@ -54,6 +73,9 @@ def import_key_pair(
 
 @task
 def instances(aws_region=config.AWS_AWS_REGION):
+    """
+    Filters all EC2 instances available to your account
+    """
     conn = _get_ec2_connection(
         aws_region,
         config.CREDENTIALS_AWS_ACCESS_KEY_ID,
