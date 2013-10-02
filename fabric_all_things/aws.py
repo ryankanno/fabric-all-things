@@ -10,6 +10,8 @@ from fabric.colors import green
 from config import config
 from utilities import wait_for_instance_state
 
+import os
+
 @task
 def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None, key_name=None,
         availability_zone=None, security_groups=None, user_data=None):
@@ -37,7 +39,11 @@ def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None, 
 
 
 @task
-def images(aws_region=config.AWS_AWS_REGION, architecture='x86_64', image_type='machine', root_device_type='ebs', **kwargs):
+def images(
+    aws_region=config.AWS_AWS_REGION,
+    architecture='x86_64',
+    image_type='machine',
+    root_device_type='ebs', **kwargs):
     """
     Filters all EC2 images available 
     """
@@ -66,15 +72,21 @@ def import_key_pair(
         config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
+    path_to_public_key = os.path.expanduser(path_to_public_key)
+
     with open(path_to_public_key, "rb") as public_key_file:
         encoded_public_key = public_key_file.read()
-        conn.import_key_pair(key_name, encoded_public_key)
+        key_pair = conn.import_key_pair(key_name, encoded_public_key)
+
+        print "Successfully uploaded keypair {0} ({1})".format(
+            key_pair.name,
+            key_pair.fingerprint)
 
 
 @task
 def instances(aws_region=config.AWS_AWS_REGION):
     """
-    Filters all EC2 instances available to your account
+    Returns all EC2 instances available to your account in a particular region
     """
     conn = _get_ec2_connection(
         aws_region,
@@ -82,9 +94,14 @@ def instances(aws_region=config.AWS_AWS_REGION):
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
     reservations = conn.get_all_instances()
-    for idx, r in enumerate(reservations):
-        print '%d. Id: %s, Region: %s, Instances count: %d, Instances: %s' % (idx, r.id, r.region.name, len(r.instances), [e.id + '/' + e.state + '/' + str(e.tags) for e in r.instances])
-        print 'public_dns_name: %s | IP: %s' % (r.instances[0].public_dns_name, r.instances[0].ip_address)
+    for index, reservation in enumerate(reservations):
+        idx = index + 1
+        print "{0}. Id: {1} ({2}), Instances: {3}".format(
+            idx, reservation.id, reservation.region.name, len(reservation.instances))
+        print "{0}  Name: {1} | IP: {2}".format(
+            "".rjust(len(str(idx))),
+            reservation.instances[0].public_dns_name, 
+            reservation.instances[0].ip_address)
 
 
 def _create_ami():
@@ -109,8 +126,5 @@ def _get_ec2_connection(aws_region, aws_access_key_id, aws_secret_access_key):
         aws_access_key_id=aws_access_key_id, 
         aws_secret_access_key=aws_secret_access_key)
 
-
-def _get_latest_ami_image():
-    pass
 
 # vim: filetype=python
