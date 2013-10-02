@@ -25,6 +25,7 @@ def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None, 
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
     instance_type = instance_type or 'm1.small'
+    security_groups = security_groups.split(',')
 
     reservation = conn.run_instances(
         image_id=ami_id,
@@ -35,6 +36,11 @@ def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None, 
         placement=availability_zone).instances[0]
 
     wait_for_instance_state(reservation, 'running')
+
+    print "... Instance IP: {0}".format(reservation.ip_address)
+    print "... Instance Hostname: {0}".format(reservation.public_dns_name)
+    print "..."
+
     return reservation
 
 
@@ -76,11 +82,11 @@ def import_key_pair(
 
     with open(path_to_public_key, "rb") as public_key_file:
         encoded_public_key = public_key_file.read()
-        key_pair = conn.import_key_pair(key_name, encoded_public_key)
+        keypair = conn.import_key_pair(key_name, encoded_public_key)
 
         print "Successfully uploaded keypair {0} ({1})".format(
-            key_pair.name,
-            key_pair.fingerprint)
+            keypair.name,
+            keypair.fingerprint)
 
 
 @task
@@ -102,6 +108,25 @@ def instances(aws_region=config.AWS_AWS_REGION):
             "".rjust(len(str(idx))),
             reservation.instances[0].public_dns_name, 
             reservation.instances[0].ip_address)
+        
+
+@task
+def keypairs(
+    aws_region=config.AWS_AWS_REGION):
+    """
+    Returns all keypairs
+    """
+    conn = _get_ec2_connection(
+        aws_region,
+        config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
+        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
+
+    keypairs = conn.get_all_key_pairs()
+
+    for index, keypair in enumerate(keypairs):
+        idx = index + 1
+        print "{0}. Name: {1} ({2})".format(
+            idx, keypair.name, keypair.fingerprint)
 
 
 def _create_ami():
