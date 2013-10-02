@@ -4,10 +4,11 @@
 from boto.ec2 import connect_to_region
 from boto.ec2.blockdevicemapping import BlockDeviceMapping
 from boto.ec2.blockdevicemapping import BlockDeviceType
+from ..config import config
+
 from fabric.api import task
 from fabric.colors import green
 
-from config import config
 from utilities import wait_for_instance_state
 
 import os
@@ -100,14 +101,19 @@ def instances(aws_region=config.AWS_AWS_REGION):
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
     reservations = conn.get_all_instances()
-    for index, reservation in enumerate(reservations):
-        idx = index + 1
-        print "{0}. Id: {1} ({2}), Instances: {3}".format(
-            idx, reservation.id, reservation.region.name, len(reservation.instances))
-        print "{0}  Name: {1} | IP: {2}".format(
-            "".rjust(len(str(idx))),
-            reservation.instances[0].public_dns_name, 
-            reservation.instances[0].ip_address)
+
+    if reservations:
+        for index, reservation in enumerate(reservations):
+            idx = index + 1
+            print "{0}. Id: {1} ({2}), Instances: {3}".format(
+                idx, reservation.id, reservation.region.name, len(reservation.instances))
+            print "{0}  Name: {1} | IP: {2}".format(
+                "".rjust(len(str(idx))),
+                reservation.instances[0].public_dns_name, 
+                reservation.instances[0].ip_address)
+    else:
+        print "You have {0} instances in {1}".format(green("0",bold=True),
+                aws_region)
         
 
 @task
@@ -127,14 +133,6 @@ def keypairs(
         idx = index + 1
         print "{0}. Name: {1} ({2})".format(
             idx, keypair.name, keypair.fingerprint)
-
-
-def _create_ami():
-    pass
-
-
-def _create_image():
-    pass
 
 
 def _get_block_device_mapping(device_name, size):
