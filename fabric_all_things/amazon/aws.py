@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from boto.ec2 import connect_to_region
+from boto.ec2 import regions
 from boto.ec2.blockdevicemapping import BlockDeviceMapping
 from boto.ec2.blockdevicemapping import BlockDeviceType
 from ..config import config
@@ -91,16 +92,37 @@ def import_key_pair(
 
 
 @task
-def instances(aws_region=config.AWS_AWS_REGION):
+def all_instances():
+    """
+    Returns all EC2 instances available to your account in all regions
+    """
+    reservations = []
+    aws_regions = regions(
+        aws_acess_key_id=config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
+        aws_secret_access_key=config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
+    for region in aws_regions: 
+        reservations.extend(_get_reservations(region.name))
+
+    if reservations:
+        for index, reservation in enumerate(reservations):
+            idx = index + 1
+            print "{0}. Id: {1} ({2}), Instances: {3}".format(
+                idx, reservation.id, reservation.region.name, len(reservation.instances))
+            print "{0}  Name: {1} | IP: {2}".format(
+                "".rjust(len(str(idx))),
+                reservation.instances[0].public_dns_name, 
+                reservation.instances[0].ip_address)
+    else:
+        print "You have {0} instances in {1}".format(green("0",bold=True),
+            ", ".join([region.name for region in aws_regions]))
+
+
+@task
+def instances_by_region(aws_region=config.AWS_AWS_REGION):
     """
     Returns all EC2 instances available to your account in a particular region
     """
-    conn = _get_ec2_connection(
-        aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
-        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
-
-    reservations = conn.get_all_instances()
+    reservations = _get_reservations(aws_region)
 
     if reservations:
         for index, reservation in enumerate(reservations):
@@ -114,7 +136,7 @@ def instances(aws_region=config.AWS_AWS_REGION):
     else:
         print "You have {0} instances in {1}".format(green("0",bold=True),
                 aws_region)
-        
+
 
 @task
 def keypairs(
@@ -133,6 +155,19 @@ def keypairs(
         idx = index + 1
         print "{0}. Name: {1} ({2})".format(
             idx, keypair.name, keypair.fingerprint)
+
+
+def _get_reservations(aws_region):
+
+    conn = _get_ec2_connection(
+        aws_region,
+        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
+        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
+
+    try:
+        return conn.get_all_instances() 
+    except:
+        return []
 
 
 def _get_block_device_mapping(device_name, size):
