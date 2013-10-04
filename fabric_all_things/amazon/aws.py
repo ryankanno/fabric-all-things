@@ -91,6 +91,7 @@ def import_key_pair(
             keypair.fingerprint)
 
 
+# TODO: Refactor output
 @task
 def all_instances():
     """
