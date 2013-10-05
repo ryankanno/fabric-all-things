@@ -3,7 +3,8 @@
 
 from fabric.api import env
 from fabric.api import require
-from contextlib import contextmanager 
+from contextlib import contextmanager
+
 
 @contextmanager
 def virtualenv():

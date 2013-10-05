@@ -5,6 +5,7 @@ from fabric.api import settings
 from fabric.api import sudo
 from fabric.api import task
 
+
 @task
 def service(name, action, warn_only=False):
     """ Generic function to start/stop/restart an init.d SysV service"""
