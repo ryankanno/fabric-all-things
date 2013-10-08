@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import aws 
+import aws
 
 # vim: filetype=python

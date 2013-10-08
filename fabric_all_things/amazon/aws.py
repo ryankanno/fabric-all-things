@@ -14,16 +14,18 @@ from utilities import wait_for_instance_state
 
 import os
 
+
 @task
-def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None, key_name=None,
-        availability_zone=None, security_groups=None, user_data=None):
+def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None,
+                  key_name=None, availability_zone=None, security_groups=None,
+                  user_data=None):
     """
-    Creates and runs AWS ami in a specified region 
+    Creates and runs AWS ami in a specified region
     """
 
     conn = _get_ec2_connection(
         aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
+        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
     instance_type = instance_type or 'm1.small'
@@ -34,7 +36,7 @@ def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None, 
         key_name=key_name,
         security_groups=security_groups,
         instance_type=instance_type,
-        user_data=user_data, 
+        user_data=user_data,
         placement=availability_zone).instances[0]
 
     wait_for_instance_state(reservation, 'running')
@@ -47,20 +49,18 @@ def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None, 
 
 
 @task
-def images(
-    aws_region=config.AWS_AWS_REGION,
-    architecture='x86_64',
-    image_type='machine',
-    root_device_type='ebs', **kwargs):
+def images(aws_region=config.AWS_AWS_REGION, architecture='x86_64',
+           image_type='machine', root_device_type='ebs', **kwargs):
     """
-    Filters all EC2 images available 
+    Filters all EC2 images available
     """
-    filters = {'architecture': architecture, 'image_type': image_type, 'root_device_type': root_device_type}
+    filters = {'architecture': architecture, 'image_type': image_type,
+               'root_device_type': root_device_type}
     merged_filters = dict(kwargs.items() + filters.items())
 
     conn = _get_ec2_connection(
         aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
+        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
     for image in conn.get_all_images(filters=merged_filters):
@@ -68,16 +68,14 @@ def images(
 
 
 @task
-def import_key_pair(
-    key_name, 
-    path_to_public_key, 
-    aws_region=config.AWS_AWS_REGION):
+def import_key_pair(key_name, path_to_public_key,
+                    aws_region=config.AWS_AWS_REGION):
     """
     Imports AWS key pair from local machine into region
     """
     conn = _get_ec2_connection(
         aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
+        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
     path_to_public_key = os.path.expanduser(path_to_public_key)
@@ -99,22 +97,25 @@ def all_instances():
     """
     reservations = []
     aws_regions = regions(
-        aws_acess_key_id=config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
+        aws_acess_key_id=config.CREDENTIALS_AWS_ACCESS_KEY_ID,
         aws_secret_access_key=config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
-    for region in aws_regions: 
+
+    for region in aws_regions:
         reservations.extend(_get_reservations(region.name))
 
     if reservations:
         for index, reservation in enumerate(reservations):
             idx = index + 1
             print "{0}. Id: {1} ({2}), Instances: {3}".format(
-                idx, reservation.id, reservation.region.name, len(reservation.instances))
+                idx, reservation.id,
+                reservation.region.name, len(reservation.instances))
             print "{0}  Name: {1} | IP: {2}".format(
                 "".rjust(len(str(idx))),
-                reservation.instances[0].public_dns_name, 
+                reservation.instances[0].public_dns_name,
                 reservation.instances[0].ip_address)
     else:
-        print "You have {0} instances in {1}".format(green("0",bold=True),
+        print "You have {0} instances in {1}".format(
+            green("0", bold=True),
             ", ".join([region.name for region in aws_regions]))
 
 
@@ -129,25 +130,25 @@ def instances_by_region(aws_region=config.AWS_AWS_REGION):
         for index, reservation in enumerate(reservations):
             idx = index + 1
             print "{0}. Id: {1} ({2}), Instances: {3}".format(
-                idx, reservation.id, reservation.region.name, len(reservation.instances))
+                idx, reservation.id,
+                reservation.region.name, len(reservation.instances))
             print "{0}  Name: {1} | IP: {2}".format(
                 "".rjust(len(str(idx))),
-                reservation.instances[0].public_dns_name, 
+                reservation.instances[0].public_dns_name,
                 reservation.instances[0].ip_address)
     else:
-        print "You have {0} instances in {1}".format(green("0",bold=True),
-                aws_region)
+        print "You have {0} instances in {1}".format(green("0", bold=True),
+                                                     aws_region)
 
 
 @task
-def keypairs(
-    aws_region=config.AWS_AWS_REGION):
+def keypairs(aws_region=config.AWS_AWS_REGION):
     """
     Returns all keypairs
     """
     conn = _get_ec2_connection(
         aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID, 
+        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
     keypairs = conn.get_all_key_pairs()
@@ -166,7 +167,7 @@ def _get_reservations(aws_region):
         config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
     try:
-        return conn.get_all_instances() 
+        return conn.get_all_instances()
     except:
         return []
 
@@ -181,8 +182,8 @@ def _get_block_device_mapping(device_name, size):
 
 def _get_ec2_connection(aws_region, aws_access_key_id, aws_secret_access_key):
     return connect_to_region(
-        aws_region, 
-        aws_access_key_id=aws_access_key_id, 
+        aws_region,
+        aws_access_key_id=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key)
 
 
