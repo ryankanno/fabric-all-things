@@ -10,6 +10,7 @@ from ..utilities import enum
 from ..utilities import expanded_abspath
 from formatter import InstanceFormatter
 from formatter import SecurityGroupFormatter
+from formatter import SecurityGroupDetailFormatter
 
 
 @task
@@ -17,7 +18,9 @@ def all_instances():
     """
     Returns all instances in all regions
     """
-    _get_ec2_objects_across_all_regions(_get_instances, InstanceFormatter)
+    objects = _get_ec2_objects_across_all_regions(_get_instances)
+    formatter = InstanceFormatter(objects)
+    formatter.display()
 
 
 @task
@@ -25,8 +28,9 @@ def all_security_groups():
     """
     Returns all security groups in all regions
     """
-    _get_ec2_objects_across_all_regions(_get_security_groups,
-                                        SecurityGroupFormatter)
+    objects = _get_ec2_objects_across_all_regions(_get_security_groups)
+    formatter = SecurityGroupFormatter(objects)
+    formatter.display()
 
 
 @task
@@ -61,8 +65,7 @@ def key_pairs_by_region(aws_region=config.AWS_AWS_REGION):
     """
     Returns all key pairs in a particular region
     """
-    conn = _get_ec2_connection_from_config(aws_region, config)
-    key_pairs = conn.get_all_key_pairs()
+    key_pairs = _get_key_pairs(aws_region)
 
     for i, kp in enum(key_pairs):
         print "{0}. {1} ({2})".format(i, green(kp.name), kp.fingerprint)
@@ -73,13 +76,22 @@ def security_groups_by_region(aws_region=config.AWS_AWS_REGION):
     """
     Returns all security groups in a particular region
     """
-    conn = _get_ec2_connection_from_config(aws_region, config)
-    security_groups = conn.get_all_security_groups()
+    security_groups = _get_security_groups(aws_region)
     formatter = SecurityGroupFormatter(security_groups)
     formatter.display()
 
 
-def _get_ec2_objects_across_all_regions(func_get_object, func_formatter):
+@task
+def security_group_details(group_id, aws_region=config.AWS_AWS_REGION):
+    """
+    Returns security group details in a particular region
+    """
+    security_group = _get_security_groups(aws_region, group_ids=[group_id])
+    formatter = SecurityGroupDetailFormatter(security_group)
+    formatter.display()
+
+
+def _get_ec2_objects_across_all_regions(func_get_object):
     ec2_objects = []
 
     aws_regions = regions(
@@ -89,15 +101,21 @@ def _get_ec2_objects_across_all_regions(func_get_object, func_formatter):
     for region in aws_regions:
         ec2_objects.extend(func_get_object(region.name))
 
-    formatter = func_formatter(ec2_objects)
-    formatter.display()
-
+    return ec2_objects
 
 
 def _get_instances(aws_region, instance_ids=None, filters=None):
     conn = _get_ec2_connection_from_config(aws_region, config)
     try:
         return conn.get_only_instances(instance_ids, filters)
+    except:
+        return []
+
+
+def _get_key_pairs(aws_region, keynames=None, filters=None):
+    conn = _get_ec2_connection_from_config(aws_region, config)
+    try:
+        return conn.get_all_key_pairs(keynames, filters)
     except:
         return []
 

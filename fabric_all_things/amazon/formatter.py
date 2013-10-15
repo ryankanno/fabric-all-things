@@ -41,4 +41,21 @@ class SecurityGroupFormatter(object):
             print "You have {0} security groups".format(green("0", bold=True))
 
 
+class SecurityGroupDetailFormatter(object):
+
+    def __init__(self, security_groups):
+        self.security_groups = security_groups
+
+    def display(self):
+        if self.security_groups:
+            for i, sg in enum(self.security_groups):
+                print "{0}. {1} ({2}) - {3}".format(i, green(sg.name), sg.id, sg.description)
+                for rule in sg.rules:
+                    print "{0} - {1} ({2}-{3}) - {4}".format("".rjust(len(str(i)) + 1),
+                            rule.ip_protocol, rule.from_port, rule.to_port,
+                            rule.grants)
+        else:
+            print "You have {0} security groups".format(green("0", bold=True))
+
+
 # vim: filetype=python
