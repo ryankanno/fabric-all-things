@@ -1,70 +1,32 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+##!/usr/bin/env python
+## -*- coding: utf-8 -*-
 
 from boto.ec2 import connect_to_region
 from boto.ec2 import regions
-from boto.ec2.blockdevicemapping import BlockDeviceMapping
-from boto.ec2.blockdevicemapping import BlockDeviceType
 from ..config import config
-
 from fabric.api import task
 from fabric.colors import green
-
-from utilities import wait_for_instance_state
-
-import os
-
-
-@task
-def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None,
-                  key_name=None, availability_zone=None, security_groups=None,
-                  user_data=None):
-    """
-    Creates and runs AWS ami in a specified region
-    """
-
-    conn = _get_ec2_connection(
-        aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
-        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
-
-    instance_type = instance_type or 'm1.small'
-    security_groups = security_groups.split(',')
-
-    reservation = conn.run_instances(
-        image_id=ami_id,
-        key_name=key_name,
-        security_groups=security_groups,
-        instance_type=instance_type,
-        user_data=user_data,
-        placement=availability_zone).instances[0]
-
-    wait_for_instance_state(reservation, 'running')
-
-    print "... Instance IP: {0}".format(reservation.ip_address)
-    print "... Instance Hostname: {0}".format(reservation.public_dns_name)
-    print "..."
-
-    return reservation
+from ..utilities import enum
+from ..utilities import expanded_abspath
+from formatter import InstanceFormatter
+from formatter import SecurityGroupFormatter
 
 
 @task
-def images(aws_region=config.AWS_AWS_REGION, architecture='x86_64',
-           image_type='machine', root_device_type='ebs', **kwargs):
+def all_instances():
     """
-    Filters all EC2 images available
+    Returns all instances in all regions
     """
-    filters = {'architecture': architecture, 'image_type': image_type,
-               'root_device_type': root_device_type}
-    merged_filters = dict(kwargs.items() + filters.items())
+    _get_ec2_objects_across_all_regions(_get_instances, InstanceFormatter)
 
-    conn = _get_ec2_connection(
-        aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
-        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
-    for image in conn.get_all_images(filters=merged_filters):
-        print green("{0}".format(image.id)) + " - " + (image.description or "")
+@task
+def all_security_groups():
+    """
+    Returns all security groups in all regions
+    """
+    _get_ec2_objects_across_all_regions(_get_security_groups,
+                                        SecurityGroupFormatter)
 
 
 @task
@@ -73,111 +35,89 @@ def import_key_pair(key_name, path_to_public_key,
     """
     Imports AWS key pair from local machine into region
     """
-    conn = _get_ec2_connection(
-        aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
-        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
+    conn = _get_ec2_connection_from_config(aws_region, config)
+    path_to_pk = expanded_abspath(path_to_public_key)
 
-    path_to_public_key = os.path.expanduser(path_to_public_key)
-
-    with open(path_to_public_key, "rb") as public_key_file:
+    with open(path_to_pk, "rb") as public_key_file:
         encoded_public_key = public_key_file.read()
-        keypair = conn.import_key_pair(key_name, encoded_public_key)
-
+        key_pair = conn.import_key_pair(key_name, encoded_public_key)
         print "Successfully uploaded keypair {0} ({1})".format(
-            keypair.name,
-            keypair.fingerprint)
-
-
-# TODO: Refactor output
-@task
-def all_instances():
-    """
-    Returns all EC2 instances available to your account in all regions
-    """
-    reservations = []
-    aws_regions = regions(
-        aws_acess_key_id=config.CREDENTIALS_AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
-
-    for region in aws_regions:
-        reservations.extend(_get_reservations(region.name))
-
-    if reservations:
-        for index, reservation in enumerate(reservations):
-            idx = index + 1
-            print "{0}. Id: {1} ({2}), Instances: {3}".format(
-                idx, reservation.id,
-                reservation.region.name, len(reservation.instances))
-            print "{0}  Name: {1} | IP: {2}".format(
-                "".rjust(len(str(idx))),
-                reservation.instances[0].public_dns_name,
-                reservation.instances[0].ip_address)
-    else:
-        print "You have {0} instances in {1}".format(
-            green("0", bold=True),
-            ", ".join([region.name for region in aws_regions]))
+            key_pair.name,
+            key_pair.fingerprint)
 
 
 @task
 def instances_by_region(aws_region=config.AWS_AWS_REGION):
     """
-    Returns all EC2 instances available to your account in a particular region
+    Returns all instances in a particular region
     """
-    reservations = _get_reservations(aws_region)
-
-    if reservations:
-        for index, reservation in enumerate(reservations):
-            idx = index + 1
-            print "{0}. Id: {1} ({2}), Instances: {3}".format(
-                idx, reservation.id,
-                reservation.region.name, len(reservation.instances))
-            print "{0}  Name: {1} | IP: {2}".format(
-                "".rjust(len(str(idx))),
-                reservation.instances[0].public_dns_name,
-                reservation.instances[0].ip_address)
-    else:
-        print "You have {0} instances in {1}".format(green("0", bold=True),
-                                                     aws_region)
+    instances = _get_instances(aws_region)
+    formatter = InstanceFormatter(instances)
+    formatter.display()
 
 
 @task
-def keypairs(aws_region=config.AWS_AWS_REGION):
+def key_pairs_by_region(aws_region=config.AWS_AWS_REGION):
     """
-    Returns all keypairs
+    Returns all key pairs in a particular region
     """
-    conn = _get_ec2_connection(
-        aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
-        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
+    conn = _get_ec2_connection_from_config(aws_region, config)
+    key_pairs = conn.get_all_key_pairs()
 
-    keypairs = conn.get_all_key_pairs()
-
-    for index, keypair in enumerate(keypairs):
-        idx = index + 1
-        print "{0}. Name: {1} ({2})".format(
-            idx, keypair.name, keypair.fingerprint)
+    for i, kp in enum(key_pairs):
+        print "{0}. {1} ({2})".format(i, green(kp.name), kp.fingerprint)
 
 
-def _get_reservations(aws_region):
+@task
+def security_groups_by_region(aws_region=config.AWS_AWS_REGION):
+    """
+    Returns all security groups in a particular region
+    """
+    conn = _get_ec2_connection_from_config(aws_region, config)
+    security_groups = conn.get_all_security_groups()
+    formatter = SecurityGroupFormatter(security_groups)
+    formatter.display()
 
-    conn = _get_ec2_connection(
-        aws_region,
-        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
-        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
+def _get_ec2_objects_across_all_regions(func_get_object, func_formatter):
+    ec2_objects = []
+
+    aws_regions = regions(
+        aws_acess_key_id=config.CREDENTIALS_AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
+
+    for region in aws_regions:
+        ec2_objects.extend(func_get_object(region.name))
+
+    formatter = func_formatter(ec2_objects)
+    formatter.display()
+
+
+
+def _get_instances(aws_region, instance_ids=None, filters=None):
+    conn = _get_ec2_connection_from_config(aws_region, config)
     try:
-        return conn.get_all_instances()
+        return conn.get_only_instances(instance_ids, filters)
     except:
         return []
 
 
-def _get_block_device_mapping(device_name, size):
-    device_type = BlockDeviceType()
-    device_type.size = size
-    device_mapping = BlockDeviceMapping()
-    device_mapping[device_name] = device_type
-    return device_mapping
+def _get_security_groups(aws_region,
+                         group_names=None,
+                         group_ids=None,
+                         filters=None):
+    conn = _get_ec2_connection_from_config(aws_region, config)
+    try:
+        return conn.get_all_security_groups(group_names, group_ids, filters)
+    except:
+        return []
+
+
+def _get_ec2_connection_from_config(aws_region, config):
+    return _get_ec2_connection(
+        aws_region,
+        config.CREDENTIALS_AWS_ACCESS_KEY_ID,
+        config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
 
 
 def _get_ec2_connection(aws_region, aws_access_key_id, aws_secret_access_key):
@@ -187,4 +127,55 @@ def _get_ec2_connection(aws_region, aws_access_key_id, aws_secret_access_key):
         aws_secret_access_key=aws_secret_access_key)
 
 
-# vim: filetype=python
+
+#from utilities import wait_for_instance_state
+
+#@task
+#def images(aws_region=config.AWS_AWS_REGION, architecture='x86_64',
+           #image_type='machine', root_device_type='ebs', **kwargs):
+    #"""
+    #Filters all EC2 images available
+    #"""
+    #filters = {'architecture': architecture, 'image_type': image_type,
+               #'root_device_type': root_device_type}
+    #merged_filters = dict(kwargs.items() + filters.items())
+
+    #conn = _get_ec2_connection(
+        #aws_region,
+        #config.CREDENTIALS_AWS_ACCESS_KEY_ID,
+        #config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
+
+    #for image in conn.get_all_images(filters=merged_filters):
+        #print green("{0} - {1}".format(image.id, image.description or ""))
+
+
+
+#@task
+#def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None,
+                  #key_name=None, availability_zone=None, security_groups=None,
+                  #user_data=None):
+    #"""
+    #Creates and runs AWS ami in a specified region
+    #"""
+    #conn = _get_ec2_connection_from_config(aws_region, config)
+
+    #instance_type = instance_type or 'm1.small'
+    #security_groups = security_groups.split(',')
+
+    #reservation = conn.run_instances(
+        #image_id=ami_id,
+        #key_name=key_name,
+        #security_groups=security_groups,
+        #instance_type=instance_type,
+        #user_data=user_data,
+        #placement=availability_zone).instances[0]
+
+    #wait_for_instance_state(reservation, 'running')
+
+    #print "... Instance IP: {0}".format(reservation.ip_address)
+    #print "... Instance Hostname: {0}".format(reservation.public_dns_name)
+    #print "..."
+
+    #return reservation
+
+## vim: filetype=python
