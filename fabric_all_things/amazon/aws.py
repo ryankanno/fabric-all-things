@@ -32,6 +32,20 @@ def all_security_groups():
     formatter = SecurityGroupFormatter(objects)
     formatter.display()
 
+@task
+def images_by_region(aws_region=config.AWS_AWS_REGION, architecture='x86_64',
+        image_type='machine', root_device_type='ebs', **kwargs):
+    """
+    Filters images in a particular region
+    """
+    filters = {'architecture': architecture, 'image_type': image_type,
+               'root_device_type': root_device_type}
+    all_filters = dict(kwargs.items() + filters.items())
+    images = _get_images(filters=all_filters)
+
+    for image in images:
+        print green("{0} - {1}".format(image.id, image.description or ""))
+
 
 @task
 def import_key_pair(key_name, path_to_public_key,
@@ -104,6 +118,15 @@ def _get_ec2_objects_across_all_regions(func_get_object):
     return ec2_objects
 
 
+def _get_images(aws_region, image_ids=None, owners=None, executable_by=None,
+                filters=None):
+    conn = _get_ec2_connection_from_config(aws_region, config)
+    try:
+        return conn.get_all_images(image_ids, owners, executable_by, filters)
+    except:
+        return []
+
+
 def _get_instances(aws_region, instance_ids=None, filters=None):
     conn = _get_ec2_connection_from_config(aws_region, config)
     try:
@@ -147,25 +170,6 @@ def _get_ec2_connection(aws_region, aws_access_key_id, aws_secret_access_key):
 
 
 #from utilities import wait_for_instance_state
-
-#@task
-#def images(aws_region=config.AWS_AWS_REGION, architecture='x86_64',
-           #image_type='machine', root_device_type='ebs', **kwargs):
-    #"""
-    #Filters all EC2 images available
-    #"""
-    #filters = {'architecture': architecture, 'image_type': image_type,
-               #'root_device_type': root_device_type}
-    #merged_filters = dict(kwargs.items() + filters.items())
-
-    #conn = _get_ec2_connection(
-        #aws_region,
-        #config.CREDENTIALS_AWS_ACCESS_KEY_ID,
-        #config.CREDENTIALS_AWS_SECRET_ACCESS_KEY)
-
-    #for image in conn.get_all_images(filters=merged_filters):
-        #print green("{0} - {1}".format(image.id, image.description or ""))
-
 
 
 #@task
