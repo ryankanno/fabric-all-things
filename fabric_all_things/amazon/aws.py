@@ -32,9 +32,10 @@ def all_security_groups():
     formatter = SecurityGroupFormatter(objects)
     formatter.display()
 
+
 @task
 def images_by_region(aws_region=config.AWS_AWS_REGION, architecture='x86_64',
-        image_type='machine', root_device_type='ebs', **kwargs):
+                     image_type='machine', root_device_type='ebs', **kwargs):
     """
     Filters images in a particular region
     """
@@ -173,7 +174,8 @@ def _get_ec2_connection(aws_region, aws_access_key_id, aws_secret_access_key):
 
 
 #@task
-#def run_instances(ami_id, aws_region=config.AWS_AWS_REGION, instance_type=None,
+#def run_instances(ami_id, aws_region=config.AWS_AWS_REGION,
+#                   instance_type=None,
                   #key_name=None, availability_zone=None, security_groups=None,
                   #user_data=None):
     #"""
