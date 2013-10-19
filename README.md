@@ -51,4 +51,4 @@ List available tasks:
 
 Run tasks:
 
-`fab test uname`
+`fab test system.uname`
