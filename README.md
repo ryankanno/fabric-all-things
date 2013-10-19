@@ -15,7 +15,7 @@ provision the Vagrant instance.
 
 Create a file named environment.py
 
-```
+```python
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -35,7 +35,7 @@ def test():
 
 Create a file named fabfile.py
 
-```
+```python
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
