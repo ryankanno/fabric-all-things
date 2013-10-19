@@ -15,7 +15,7 @@ provision the Vagrant instance.
 
 Create a file named environment.py
 
-<code>
+```
 @task
 def test():
     env.settings = 'staging'
@@ -23,11 +23,11 @@ def test():
     env.roledefs.update({'www-nginx': ['88.88.88.88']})
     env.user = 'vagrant'
     env.password = 'vagrant'
-</code>
+```
 
 Create a file named fabfile.py
 
-<code>
+```
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -35,7 +35,7 @@ from environment import test
 from fabric_all_things import *
 
 # vim: filetype=python
-</code>
+```
 
 List available tasks:
 
