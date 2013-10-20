@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from fabric.api import execute
 from fabric.api import settings
 from fabric.api import sudo
 from fabric.api import task
+from fabric.tasks import Task
+
+
+__all__ = ['start', 'stop', 'restart', 'reload', 'status']
 
 
 @task
@@ -14,21 +19,22 @@ def service_command(service, command, warn_only=False):
             service=service, command=command))
 
 
-@task
-def start(service, warn_only=False):
-    """ Start an init.d SysV service"""
-    return service_command(service, 'start', warn_only)
+class ServiceCommand(Task):
+    def __init__(self, command, docstring, roles=[], *args, **kwargs):
+        super(ServiceCommand, self).__init__(*args, **kwargs)
+        self.name = command
+        self.__doc__ = docstring
+        self.roles = roles
+
+    def run(self, service, warn_only=False):
+        return execute(service_command, service, self.name, warn_only)
 
 
-@task
-def stop(service, warn_only=False):
-    """ Stop an init.d SysV service"""
-    return service_command(service, 'stop', warn_only)
+start = ServiceCommand('start', 'Start an init.d SysV service')
+stop = ServiceCommand('stop', 'Stop an init.d SysV service')
+restart = ServiceCommand('restart', 'Restart an init.d SysV service')
+reload = ServiceCommand('reload', 'Reload an init.d SysV service')
+status = ServiceCommand('status', 'Display the status of a SysV service')
 
-
-@task
-def restart(service, warn_only=False):
-    """ Restart an init.d SysV service"""
-    return service_command(service, 'restart', warn_only)
 
 # vim: filetype=python

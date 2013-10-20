@@ -1,31 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from fabric.api import roles
-from fabric.api import task
-from ..service import restart as start_command
-from ..service import restart as stop_command
-from ..service import restart as restart_command
+import fabric_all_things.service as service
 
 
-@task
-@roles('www-nginx')
-def start():
-    """ Starts nginx """
-    start_command('nginx')
+class NginxCommand(service.ServiceCommand):
+    def run(self):
+        return super(NginxCommand, self).run('nginx')
 
 
-@task
-@roles('www-nginx')
-def stop():
-    """ Stops nginx """
-    stop_command('nginx')
-
-
-@task
-@roles('www-nginx')
-def restart():
-    """ Restarts nginx """
-    restart_command('nginx')
+start = NginxCommand('start', 'Starts nginx', roles=['www-nginx'])
+stop = NginxCommand('stop', 'Stops nginx', roles=['www-nginx'])
+reload = NginxCommand('reload', 'Reload nginx', roles=['www-nginx'])
+restart = NginxCommand('restart', 'Restart nginx', roles=['www-nginx'])
 
 # vim: filetype=python
