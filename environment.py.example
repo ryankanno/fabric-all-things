@@ -8,7 +8,12 @@ from fabric.api import task
 def test():
     env.settings = 'test'
     env.hosts = ['88.88.88.88']
-    env.roledefs.update({'www-nginx': ['88.88.88.88']})
+    roles = {
+        'www-nginx': ['88.88.88.88'],
+        'cache-redis': ['88.88.88.88'],
+        'proxy-haproxy': ['88.88.88.88']
+    }
+    env.roledefs.update(roles)
     env.user = 'vagrant'
     env.password = 'vagrant'
 
