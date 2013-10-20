@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from fabric.api import hide
+from fabric.api import puts
 from fabric.api import run
-from fabric.api import sudo
+from fabric.api import settings
 from fabric.api import task
-from fabric.colors import green
-from fabric.context_managers import quiet
+from .output_helpers import success
+from .output_helpers import error
 
 
 @task
@@ -33,15 +35,17 @@ def free(flags='-k'):
 
 
 @task
-def groups(user):
+def groups(user=None):
     """ Returns group user is in """
-    system_command("groups {0}".format(user))
+    command = "groups {0}".format(user) if user else "groups"
+    system_command(command)
 
 
 @task
-def id(user):
+def id(user=None):
     """ Returns real and user group ids """
-    system_command("id {0}".format(user))
+    command = "id {0}".format(user) if user else "id"
+    system_command(command)
 
 
 @task
@@ -80,10 +84,13 @@ def w():
     system_command('w')
 
 
-def system_command(command):
-    with quiet():
-        system_command = run(command, quiet=True)
-        print(green(system_command))
-
+def system_command(cmd, hidden_output=('running', 'warnings', 'output'),
+                   warn_only=True, error_msg=''):
+    with settings(hide(*hidden_output), warn_only=warn_only):
+        output = run(cmd)
+        if output.succeeded:
+            return success(output)
+        else:
+            return error(error_msg) if error_msg else error(output)
 
 # vim: filetype=python
