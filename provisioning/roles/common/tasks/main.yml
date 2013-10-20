@@ -11,11 +11,14 @@
     apt: upgrade=yes
     tags: common
 
-  - name: 'nginx: present'
-    apt: pkg=nginx state=present
-    tags: nginx, install
+  - name: 'install packages'
+    action: apt pkg=$item state=present
+    with_items:
+      - nginx
+      - redis-server
+      - haproxy
+      - uwsgi
+      - uwsgi-plugin-python
 
-  - name: 'nginx: delete default vhost'
-    file: path=/etc/nginx/sites-enabled/default state=absent
-    notify: 'nginx: restart'
-    tags: nginx
+  - name: 'haproxy: set enabled to 1'
+    action: lineinfile dest=/etc/default/haproxy regexp="^ENABLED" line="ENABLED=1"
