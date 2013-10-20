@@ -5,7 +5,7 @@ from fabric.api import env
 from fabric.api import task
 
 @task
-def staging():
+def test():
     env.settings = 'test'
     env.hosts = ['88.88.88.88']
     env.roledefs.update({'www-nginx': ['88.88.88.88']})
