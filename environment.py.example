@@ -1,0 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from fabric.api import env
+from fabric.api import task
+
+@task
+def staging():
+    env.settings = 'test'
+    env.hosts = ['88.88.88.88']
+    env.roledefs.update({'www-nginx': ['88.88.88.88']})
+    env.user = 'vagrant'
+    env.password = 'vagrant'
+
+# vim: filetype=python

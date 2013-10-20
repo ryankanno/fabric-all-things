@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from environment import test
+from fabric_all_things import *
+
+# vim: filetype=python
