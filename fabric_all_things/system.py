@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from fabric.api import hide
-from fabric.api import puts
 from fabric.api import run
 from fabric.api import settings
 from fabric.api import task
@@ -84,10 +83,11 @@ def w():
     system_command('w')
 
 
-def system_command(cmd, hidden_output=('running', 'warnings', 'output'),
+def system_command(cmd, runner=run,
+                   hidden_output=('running', 'warnings', 'output'),
                    warn_only=True, error_msg=''):
     with settings(hide(*hidden_output), warn_only=warn_only):
-        output = run(cmd)
+        output = runner(cmd)
         if output.succeeded:
             return success(output)
         else:
