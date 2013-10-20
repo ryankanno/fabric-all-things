@@ -1,0 +1,11 @@
+# usage: ansible-playbook example-playbook.yml --extra-vars=""
+---
+- name: fabric-all-things test
+  hosts: vagrant
+  sudo: True
+  user: vagrant
+  gather_facts: False
+  tasks:
+    - include: roles/common/tasks/main.yml
+  handlers:
+    - include: roles/common/handlers/main.yml

@@ -1,0 +1,21 @@
+---
+  - name: 'common: install python-apt'
+    raw: 'apt-get install -y python-apt'
+    tags: common
+
+  - name: 'common: update apt package cache'
+    apt: update_cache=yes
+    tags: common
+
+  - name: 'common: update apt'
+    apt: upgrade=yes
+    tags: common
+
+  - name: 'nginx: present'
+    apt: pkg=nginx state=present
+    tags: nginx, install
+
+  - name: 'nginx: delete default vhost'
+    file: path=/etc/nginx/sites-enabled/default state=absent
+    notify: 'nginx: restart'
+    tags: nginx
